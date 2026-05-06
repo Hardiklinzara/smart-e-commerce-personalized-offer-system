@@ -56,6 +56,13 @@ html,body,[class*="css"]{ font-family:'Inter',sans-serif; }
   --acc:#2563eb; --grn:#16a34a; --red:#dc2626; --ylw:#d97706; --pur:#7c3aed;
   --txt:#111827; --mut:#6b7280;
 }
+/* dark mode overrides */
+@media (prefers-color-scheme: dark) {
+  :root{
+    --surf:#1e1e2e; --bdr:#2e2e42;
+    --txt:#f1f1f1; --mut:#a0a0b0;
+  }
+}
 
 .topbar{
   display:flex; align-items:center; justify-content:space-between;
@@ -90,12 +97,18 @@ html,body,[class*="css"]{ font-family:'Inter',sans-serif; }
 
 .lcard{
   max-width:430px; margin:3rem auto;
-  background:var(--surf); border:1px solid var(--bdr);
+  background:#ffffff !important; border:1px solid #e9ecef;
   border-radius:18px; padding:2.5rem 2rem 2rem;
+  box-shadow:0 4px 24px rgba(0,0,0,0.12);
 }
 .lcard-logo{ font-size:2.2rem; text-align:center; margin-bottom:.2rem; }
-.lcard-title{ font-size:1.55rem; font-weight:800; color:var(--txt); text-align:center; }
-.lcard-sub  { font-size:.87rem; color:var(--mut); text-align:center; margin-bottom:1.8rem; }
+.lcard-title{
+  font-size:1.7rem; font-weight:800;
+  color:#2563eb !important;
+  text-align:center; letter-spacing:-0.5px;
+  margin-bottom:.3rem;
+}
+.lcard-sub{ font-size:.87rem; color:#6b7280 !important; text-align:center; margin-bottom:1.8rem; }
 
 .cart-box{
   background:var(--surf); border:1px solid var(--bdr);
@@ -309,12 +322,16 @@ for k, v in _defaults.items():
 
 def login_page():
     st.markdown('<div class="lcard">', unsafe_allow_html=True)
-    st.markdown('<div class="lcard-logo">🛍️</div>', unsafe_allow_html=True)
-    st.markdown('<div class="lcard-title">SmartOffer</div>', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="lcard-sub">AI-powered personalised offers · Every shopper, every visit</div>',
-        unsafe_allow_html=True
-    )
+    st.markdown("""
+    <div style="text-align:center; margin-bottom:1.5rem;">
+      <div style="font-size:2.4rem; margin-bottom:.3rem;">🛍️</div>
+      <div style="font-size:1.8rem; font-weight:800; color:#2563eb;
+                  letter-spacing:-0.5px; margin-bottom:.3rem;">SmartOffer</div>
+      <div style="font-size:.87rem; color:#6b7280;">
+        AI-powered personalised offers &middot; Every shopper, every visit
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     tab_cust, tab_owner = st.tabs(["🛒  Customer", "🏪  Shop Owner"])
 
@@ -432,25 +449,36 @@ def show_popup():
         sub      = "We missed you — here's a special comeback reward"
         confetti = "🥳 🎊 🎉 🎈 🎁"
 
+    # Render popup HTML (visual only — button is rendered below via Streamlit)
     st.markdown(f"""
-    <div class="pop-overlay">
-      <div class="pop-box">
-        <div class="pop-emoj">{emoj}</div>
-        <div class="confetti">{confetti}</div>
-        <div class="pop-title">{title}</div>
-        <div class="pop-sub">{sub}</div>
-        <div class="pop-disc">{disc}% OFF</div>
-        <div class="pop-note">Applied automatically to every item in your cart 🛒</div>
+    <div style="background:rgba(0,0,0,0.55);position:fixed;inset:0;z-index:9998;
+                display:flex;align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:22px;padding:2.5rem 2rem 1.5rem;
+                  max-width:400px;width:90%;text-align:center;
+                  box-shadow:0 25px 60px rgba(0,0,0,.22);">
+        <div style="font-size:3.5rem;line-height:1.1;">{emoj}</div>
+        <div style="font-size:1.3rem;letter-spacing:.15rem;margin:.3rem 0;">{confetti}</div>
+        <div style="font-size:1.6rem;font-weight:800;color:#111827;margin:.4rem 0 .2rem;">{title}</div>
+        <div style="font-size:.95rem;color:#6b7280;">{sub}</div>
+        <div style="font-size:3rem;font-weight:900;color:#2563eb;margin:.3rem 0;">{disc}% OFF</div>
+        <div style="font-size:.8rem;color:#9ca3af;margin-bottom:1.2rem;">
+          Applied automatically to every item in your cart 🛒
+        </div>
       </div>
     </div>
     """, unsafe_allow_html=True)
 
+    # Streamlit button rendered below the overlay — always clickable
+    st.markdown("<div style='height:340px'></div>", unsafe_allow_html=True)
     _, mid, _ = st.columns([1, 2, 1])
     with mid:
         if st.button("🎉  Claim & Start Shopping!",
                      type="primary", use_container_width=True, key="popup_close"):
             st.session_state.popup_shown = True
             st.rerun()
+    if st.button("✖  Skip offer and browse", use_container_width=True, key="popup_skip"):
+        st.session_state.popup_shown = True
+        st.rerun()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -476,20 +504,27 @@ def customer_dashboard():
     }
     label = "🛒 Bulk Deal!" if eff_type == "bulk" else st.session_state.clabel
 
-    # topbar
-    st.markdown(f"""
-    <div class="topbar">
-      <span class="topbar-brand">🛍️ {owner['display_name']}</span>
-      <span class="topbar-right">
-        Hi <b>{st.session_state.username}</b>
-        <span class="bdg {badge_map.get(eff_type,'bdg-blue')}">{label}</span>
-        <span style="background:#eff6ff;color:#2563eb;font-weight:700;
-                     padding:.2rem .6rem;border-radius:50px;font-size:.8rem;">
-          {disc_pct}% OFF active
-        </span>
-      </span>
-    </div>
-    """, unsafe_allow_html=True)
+    # topbar with inline logout
+    tcol1, tcol2 = st.columns([6, 1])
+    with tcol1:
+        st.markdown(f"""
+        <div class="topbar">
+          <span class="topbar-brand">🛍️ {owner['display_name']}</span>
+          <span class="topbar-right">
+            Hi <b>{st.session_state.username}</b>
+            <span class="bdg {badge_map.get(eff_type,'bdg-blue')}">{label}</span>
+            <span style="background:#eff6ff;color:#2563eb;font-weight:700;
+                         padding:.2rem .6rem;border-radius:50px;font-size:.8rem;">
+              {disc_pct}% OFF active
+            </span>
+          </span>
+        </div>
+        """, unsafe_allow_html=True)
+    with tcol2:
+        if st.button("🚪 Logout", use_container_width=True, key="cust_logout"):
+            for k, v in _defaults.items():
+                st.session_state[k] = v
+            st.rerun()
 
     prod_col, cart_col = st.columns([3, 1.15], gap="large")
 
@@ -579,15 +614,20 @@ def _render_cart(products, disc_pct, eff_type):
     cart  = st.session_state.cart
     owner = st.session_state.active_owner
 
-    st.markdown('<div class="cart-box">', unsafe_allow_html=True)
-    st.markdown('<div class="cart-title">🧾 Your Cart</div>', unsafe_allow_html=True)
+    # ── Cart box with forced-visible colours ──────────────────────────────────
+    st.markdown("""
+    <div style="background:#ffffff;border:1px solid #e9ecef;border-radius:14px;
+                padding:1rem 1.1rem;margin-bottom:.8rem;">
+      <div style="font-weight:700;font-size:.95rem;color:#111827;margin-bottom:.7rem;">
+        🧾 Your Cart
+      </div>
+    """, unsafe_allow_html=True)
 
     if not cart:
         st.markdown(
-            '<p style="color:#9ca3af;font-size:.85rem;margin:0;">Cart is empty</p>',
-            unsafe_allow_html=True
+            '<p style="color:#9ca3af;font-size:.85rem;margin:0;">Cart is empty</p>'
+            '</div>', unsafe_allow_html=True
         )
-        st.markdown('</div>', unsafe_allow_html=True)
         return
 
     total     = 0
@@ -606,20 +646,53 @@ def _render_cart(products, disc_pct, eff_type):
         cart_items.append({"name": prod["name"], "qty": qty, "price": final})
 
         st.markdown(f"""
-        <div class="cart-item">
-          <span>{prod['name']}<br>
-            <span style="color:#9ca3af;font-size:.75rem;">×{qty} · ₹{int(final)}</span>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;
+                    padding:.4rem 0;border-bottom:1px solid #e9ecef;">
+          <span style="color:#111827;font-size:.84rem;">
+            {prod['name']}<br>
+            <span style="color:#9ca3af;font-size:.75rem;">×{qty} · ₹{int(final)} each</span>
           </span>
-          <span style="font-weight:600;">₹{int(line)}</span>
+          <span style="font-weight:600;color:#111827;font-size:.84rem;">₹{int(line)}</span>
         </div>
         """, unsafe_allow_html=True)
 
-    saved = round(total_mrp - total)
+    # ── Billing breakdown ─────────────────────────────────────────────────────
+    subtotal   = round(total_mrp)
+    discount_amt = round(total_mrp - total)
+    gst_amt    = round(total * 0.18)
+    grand_total = round(total + gst_amt)
+
     st.markdown(f"""
-    <div class="cart-total">Total &nbsp; ₹{int(total)}</div>
-    <span class="saving-pill">🎉 Saving ₹{int(saved)}</span>
+    <div style="margin-top:.8rem;padding-top:.6rem;border-top:1px solid #e9ecef;">
+      <div style="display:flex;justify-content:space-between;
+                  font-size:.83rem;color:#6b7280;padding:.25rem 0;">
+        <span>Subtotal (MRP)</span>
+        <span>₹{int(subtotal)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;
+                  font-size:.83rem;color:#16a34a;padding:.25rem 0;font-weight:600;">
+        <span>Discount ({disc_pct}% off)</span>
+        <span>− ₹{int(discount_amt)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;
+                  font-size:.83rem;color:#6b7280;padding:.25rem 0;">
+        <span>GST (18%)</span>
+        <span>+ ₹{int(gst_amt)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;
+                  font-size:1.05rem;font-weight:800;color:#111827;
+                  padding:.55rem 0 .2rem;border-top:2px solid #111827;margin-top:.3rem;">
+        <span>Grand Total</span>
+        <span>₹{int(grand_total)}</span>
+      </div>
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;color:#16a34a;
+                  font-size:.8rem;font-weight:600;border-radius:50px;
+                  padding:.25rem .75rem;margin-top:.5rem;display:inline-block;">
+        🎉 You save ₹{int(discount_amt)} on this order!
+      </div>
+    </div>
+    </div>
     """, unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown("")
 
@@ -668,12 +741,19 @@ def owner_dashboard():
     ret_d  = min(disc + 10.0, 80.0)
     blk_d  = disc
 
-    st.markdown(f"""
-    <div class="topbar">
-      <span class="topbar-brand">🏪 {owner['display_name']} — Owner Panel</span>
-      <span class="topbar-right">Max Discount: <b style="color:#2563eb;">{disc}%</b></span>
-    </div>
-    """, unsafe_allow_html=True)
+    otcol1, otcol2 = st.columns([6, 1])
+    with otcol1:
+        st.markdown(f"""
+        <div class="topbar">
+          <span class="topbar-brand">🏪 {owner['display_name']} — Owner Panel</span>
+          <span class="topbar-right">Max Discount: <b style="color:#2563eb;">{disc}%</b></span>
+        </div>
+        """, unsafe_allow_html=True)
+    with otcol2:
+        if st.button("🚪 Logout", use_container_width=True, key="owner_logout"):
+            for k, v in _defaults.items():
+                st.session_state[k] = v
+            st.rerun()
 
     # auto-rules card
     st.markdown(f"""
